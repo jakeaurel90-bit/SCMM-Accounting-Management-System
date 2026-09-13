@@ -1,0 +1,15 @@
+{% load static %}
+<div class="brand">Ledger<span>MY ACCOUNT</span></div>
+<nav class="nav">
+  <a href="{% url 'dashboard:pastor_dashboard' %}" class="{% if active == 'dashboard' %}active{% endif %}">My Dashboard</a>
+  <a href="{% url 'dashboard:salary_history' %}" class="{% if active == 'salary_history' %}active{% endif %}">Salary History</a>
+  <a href="{% url 'dashboard:branch_reports' %}" class="{% if active == 'branch_reports' %}active{% endif %}">Branch Reports</a>
+  <a href="{% url 'dashboard:profile' %}" class="{% if active == 'profile' %}active{% endif %}">Profile</a>
+</nav>
+<div class="sidebar-foot">
+  {{ pastor.name }}<br>{{ pastor.branch }}
+  <form method="post" action="{% url 'dashboard:logout' %}" style="margin-top:10px;">
+    {% csrf_token %}
+    <button type="submit" class="nav-logout">Log Out</button>
+  </form>
+</div>

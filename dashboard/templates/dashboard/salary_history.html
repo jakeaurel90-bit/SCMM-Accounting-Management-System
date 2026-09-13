@@ -1,0 +1,47 @@
+{% extends "dashboard/base.html" %}
+{% load static humanize %}
+
+{% block title %}Ledger — Salary History{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pastor_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_pastor_nav.html" with active="salary_history" pastor=pastor %}
+  </aside>
+  <main>
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div>
+        <h1>Salary History</h1>
+        <div class="period">{{ pastor.branch|upper }}</div>
+      </div>
+    </div>
+    <table style="margin-top:20px;">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th class="num">Amount</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in salary_history %}
+        <tr>
+          <td>{{ row.period_label }}</td>
+          <td class="num amount">₱{{ row.amount|floatformat:0|intcomma }}</td>
+          <td><span class="status {{ row.status|lower }}">{{ row.status }}</span></td>
+          <td style="text-align:right;"><a class="icon-btn" href="{% url 'dashboard:download_salary_slip' row.pk %}">Download PDF</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No salary payments recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Ledger — Log In{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div class="home-card">
+    <h1>Ledger</h1>
+    <p>Sign in to continue.</p>
+
+    {% include "dashboard/_messages.html" %}
+    {% if form.non_field_errors %}
+    <ul class="messages"><li class="error">{{ form.non_field_errors.0 }}</li></ul>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>USERNAME</label>
+        {{ form.username }}
+      </div>
+      <div class="field">
+        <label>PASSWORD</label>
+        {{ form.password }}
+      </div>
+      <button type="submit" class="btn" style="width:100%;">Log In</button>
+    </form>
+
+    <p class="hint">
+      Demo accounts — pastor: <code>ramon / pastor123</code><br>
+      finance office: <code>treasurer / treasurer123</code>
+    </p>
+  </div>
+</div>
+{% endblock %}

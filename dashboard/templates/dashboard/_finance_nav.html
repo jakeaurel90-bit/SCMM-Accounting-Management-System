@@ -1,0 +1,17 @@
+{% load static %}
+<div class="brand">Ledger<span>CHURCH FINANCE OFFICE</span></div>
+<nav class="nav">
+  <a href="{% url 'dashboard:finance_overview' %}" class="{% if active == 'overview' %}active{% endif %}">Dashboard</a>
+  <a href="{% url 'dashboard:pastors_list' %}" class="{% if active == 'pastors' %}active{% endif %}">Pastors</a>
+  <a href="{% url 'dashboard:finance_dashboard' %}" class="{% if active == 'budget' %}active{% endif %}">Evangelism Budget</a>
+  <a href="{% url 'dashboard:salary_payments' %}" class="{% if active == 'salaries' %}active{% endif %}">Salary Payments</a>
+  <a href="{% url 'dashboard:sent_history' %}" class="{% if active == 'sent_history' %}active{% endif %}">Sent History</a>
+  <a href="{% url 'dashboard:settings' %}" class="{% if active == 'settings' %}active{% endif %}">Settings</a>
+</nav>
+<div class="sidebar-foot">
+  Signed in as<br>{{ org.treasurer_title }}
+  <form method="post" action="{% url 'dashboard:logout' %}" style="margin-top:10px;">
+    {% csrf_token %}
+    <button type="submit" class="nav-logout">Log Out</button>
+  </form>
+</div>

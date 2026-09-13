@@ -1,0 +1,41 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Ledger — Settings{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="settings" org=org %}
+  </aside>
+  <main class="form-page">
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Settings</h1></div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h3 style="margin-bottom:16px;">Organization</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label>ORGANIZATION NAME</label>
+          {{ form.organization_name }}
+        </div>
+        <div class="field">
+          <label>TREASURER TITLE (SHOWN IN SIDEBAR)</label>
+          {{ form.treasurer_title }}
+        </div>
+        {% if form.errors %}
+        <ul class="errorlist">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+        {% endif %}
+        <div class="form-actions" style="margin-top:20px;">
+          <button type="submit" class="btn">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

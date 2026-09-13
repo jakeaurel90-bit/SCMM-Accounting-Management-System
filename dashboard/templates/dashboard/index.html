@@ -1,0 +1,33 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Ledger — Home{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div class="home-card">
+    <h1>Ledger</h1>
+    <p>Church finance &amp; salary dashboard.</p>
+
+    {% include "dashboard/_messages.html" %}
+
+    {% if user.is_authenticated %}
+      <div class="home-links">
+        {% if user.is_staff %}
+        <a href="{% url 'dashboard:finance_overview' %}">Finance Dashboard →</a>
+        {% endif %}
+        {% if user.pastor %}
+        <a href="{% url 'dashboard:pastor_dashboard' %}">Pastor Dashboard →</a>
+        {% endif %}
+      </div>
+      <form method="post" action="{% url 'dashboard:logout' %}" style="margin-top:18px;">
+        {% csrf_token %}
+        <button type="submit" class="btn ghost" style="width:100%;">Log Out</button>
+      </form>
+    {% else %}
+      <div class="home-links">
+        <a href="{% url 'dashboard:login' %}">Log In →</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

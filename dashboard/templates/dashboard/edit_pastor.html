@@ -1,0 +1,86 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Ledger — Edit Pastor{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="pastors" org=org %}
+  </aside>
+  <main class="form-page">
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Edit Pastor</h1></div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <form method="post">
+        {% csrf_token %}
+        <div class="field"><label>NAME</label>{{ form.name }}</div>
+        <div class="field"><label>BRANCH</label>{{ form.branch }}</div>
+        <div class="field mono"><label>PHONE</label>{{ form.phone }}</div>
+        <div class="field mono"><label>EMAIL</label>{{ form.email }}</div>
+        <div class="field mono"><label>MESSENGER</label>{{ form.messenger }}</div>
+        {% if form.errors %}
+        <ul class="errorlist">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+        {% endif %}
+        <div class="form-actions" style="margin-top:20px;">
+          <a href="{% url 'dashboard:pastors_list' %}" class="btn ghost">Cancel</a>
+          <button type="submit" class="btn">Save Changes</button>
+        </div>
+      </form>
+      <form method="post" style="margin-top:14px;" onsubmit="return confirm('Remove {{ pastor.name }}? This also deletes their salary and branch report history.');">
+        {% csrf_token %}
+        <button type="submit" name="delete" value="1" class="icon-btn" style="color:var(--rule); border-color:var(--rule);">Delete Pastor</button>
+      </form>
+    </div>
+
+    {% if pastor.user %}
+    <div class="card" style="margin-top:20px;">
+      <h3 style="margin-bottom:4px;">Login Access</h3>
+      <p class="hint" style="margin-bottom:16px;">
+        {{ pastor.name }} can sign in with username <strong>{{ pastor.user.username }}</strong> to view their own
+        salary history and branch reports.
+      </p>
+      <form method="post" action="{% url 'dashboard:reset_pastor_password' pastor.pk %}">
+        {% csrf_token %}
+        <div class="field mono">
+          <label>NEW PASSWORD</label>
+          <input type="password" name="password" minlength="6" placeholder="At least 6 characters" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn ghost">Reset Password</button>
+        </div>
+      </form>
+      <form method="post" action="{% url 'dashboard:revoke_pastor_login' pastor.pk %}" style="margin-top:14px;"
+            onsubmit="return confirm('Revoke {{ pastor.name }}\'s login? They will no longer be able to sign in.');">
+        {% csrf_token %}
+        <button type="submit" class="icon-btn" style="color:var(--rule); border-color:var(--rule);">Revoke Login</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="card" style="margin-top:20px;">
+      <h3 style="margin-bottom:4px;">Create Login</h3>
+      <p class="hint" style="margin-bottom:16px;">Let {{ pastor.name }} sign in on their own to view their salary history and branch reports.</p>
+      <form method="post" action="{% url 'dashboard:create_pastor_login' pastor.pk %}">
+        {% csrf_token %}
+        <div class="field mono">
+          <label>USERNAME</label>
+          <input type="text" name="username" required>
+        </div>
+        <div class="field mono">
+          <label>PASSWORD</label>
+          <input type="password" name="password" minlength="6" placeholder="At least 6 characters" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn">Create Login</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

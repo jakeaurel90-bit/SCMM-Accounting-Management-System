@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+{% load static humanize %}
+
+{% block title %}Ledger — Sent History{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="sent_history" org=org %}
+  </aside>
+  <main>
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Sent History</h1></div>
+    </div>
+
+    <table style="margin-top:20px;">
+      <thead><tr><th>Date</th><th>Program</th><th>Channels</th><th>Recipients</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.sent_at|date:"M j, Y g:i A" }}</td>
+          <td>{{ log.program_period }}</td>
+          <td>{{ log.channels }}</td>
+          <td>
+            {% for r in log.recipients.all %}{{ r.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+          </td>
+          <td class="num amount">₱{{ log.total_amount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">Nothing sent yet — send an allotment from the Evangelism Budget page.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </main>
+</div>
+{% endblock %}

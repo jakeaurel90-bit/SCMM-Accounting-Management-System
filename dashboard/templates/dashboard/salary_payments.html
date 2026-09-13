@@ -1,0 +1,55 @@
+{% extends "dashboard/base.html" %}
+{% load static humanize %}
+
+{% block title %}Ledger — Salary Payments{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="salaries" org=org %}
+  </aside>
+  <main>
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Salary Payments</h1></div>
+      <a href="#record-payment" class="btn ghost">+ Record Payment</a>
+    </div>
+
+    <table style="margin-top:20px; margin-bottom:34px;">
+      <thead><tr><th>Pastor</th><th>Period</th><th class="num">Amount</th><th>Status</th><th>Sent On</th></tr></thead>
+      <tbody>
+        {% for pay in payments %}
+        <tr>
+          <td>{{ pay.pastor.name }}</td>
+          <td>{{ pay.period_label }}</td>
+          <td class="num amount">₱{{ pay.amount|floatformat:0|intcomma }}</td>
+          <td><span class="status {{ pay.status|lower }}">{{ pay.status }}</span></td>
+          <td>{{ pay.sent_on|date:"M j, Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No payments recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="card form-page" id="record-payment" style="max-width:480px;">
+      <h3 style="margin-bottom:16px;">Record Payment</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field mono"><label>PASTOR</label>{{ form.pastor }}</div>
+        <div class="field"><label>PERIOD</label>{{ form.period_label }}</div>
+        <div class="field mono"><label>AMOUNT</label>{{ form.amount }}</div>
+        <div class="field mono"><label>STATUS</label>{{ form.status }}</div>
+        {% if form.errors %}
+        <ul class="errorlist">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+        {% endif %}
+        <div class="form-actions" style="margin-top:20px;">
+          <button type="submit" class="btn">Save Payment</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

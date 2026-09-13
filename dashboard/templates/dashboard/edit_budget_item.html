@@ -1,0 +1,53 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Ledger — Edit Line Item{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="budget" org=org %}
+  </aside>
+  <main class="form-page">
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Edit Line Item</h1></div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label>DESCRIPTION</label>
+          {{ form.title }}
+        </div>
+        <div class="field">
+          <label>EXTRA DETAIL (OPTIONAL)</label>
+          {{ form.description }}
+        </div>
+        <div class="field mono">
+          <label>ACCOUNT CHARGED</label>
+          {{ form.account }}
+        </div>
+        <div class="field mono">
+          <label>ORIGINAL AMOUNT</label>
+          {{ form.amount }}
+        </div>
+        {% if form.errors %}
+        <ul class="errorlist">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+        {% endif %}
+        <div class="form-actions" style="margin-top:20px;">
+          <a href="{% url 'dashboard:finance_dashboard' %}" class="btn ghost">Cancel</a>
+          <button type="submit" class="btn">Save Changes</button>
+        </div>
+      </form>
+      <form method="post" style="margin-top:14px;" onsubmit="return confirm('Remove this line item?');">
+        {% csrf_token %}
+        <button type="submit" name="delete" value="1" class="icon-btn" style="color:var(--rule); border-color:var(--rule);">Delete Line Item</button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

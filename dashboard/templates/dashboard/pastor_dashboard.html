@@ -1,0 +1,87 @@
+{% extends "dashboard/base.html" %}
+{% load static humanize %}
+
+{% block title %}Ledger — My Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pastor_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_pastor_nav.html" with active="dashboard" pastor=pastor %}
+  </aside>
+
+  <main>
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div>
+        <h1>My Dashboard</h1>
+        <div class="period">{{ pastor.branch|upper }} · {{ period|upper }}</div>
+      </div>
+    </div>
+    <div class="welcome">Welcome back, {{ pastor.name }} — here's your latest salary and branch report.</div>
+
+    {% if current_salary %}
+    <div class="hero">
+      <div>
+        <div class="status">{{ current_salary.status }}</div>
+        <div class="label">{{ current_salary.period_label|upper }} SALARY</div>
+        <div class="value">₱{{ current_salary.amount|floatformat:0|intcomma }}</div>
+        <div class="sub">Sent on {{ current_salary.sent_on|date:"M j, Y, g:i A" }}</div>
+      </div>
+      <a class="btn" href="{% url 'dashboard:download_salary_slip' current_salary.pk %}">Download PDF Slip</a>
+    </div>
+    {% endif %}
+
+    <div class="section-head">
+      <h2>Salary History</h2>
+      <span class="note"><a href="{% url 'dashboard:salary_history' %}" style="color:inherit;">VIEW ALL →</a></span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th class="num">Amount</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in salary_history %}
+        <tr>
+          <td>{{ row.period_label }}</td>
+          <td class="num amount">₱{{ row.amount|floatformat:0|intcomma }}</td>
+          <td><span class="status {{ row.status|lower }}">{{ row.status }}</span></td>
+          <td style="text-align:right;"><a class="icon-btn" href="{% url 'dashboard:download_salary_slip' row.pk %}">Download PDF</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No salary payments recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="two-col">
+      <div class="card">
+        {% if branch_report %}
+        <h3>Branch Report — {{ branch_report.period_label }} <span class="branch-tag" style="margin-left:8px;">{{ pastor.branch }}</span></h3>
+        <div class="report-row"><span>Tithes &amp; Offerings</span><span class="amt">₱{{ branch_report.tithes_offerings|floatformat:0|intcomma }}</span></div>
+        <div class="report-row"><span>Special Contributions</span><span class="amt">₱{{ branch_report.special_contributions|floatformat:0|intcomma }}</span></div>
+        <div class="report-row"><span>Branch Expenses</span><span class="amt">₱{{ branch_report.branch_expenses|floatformat:0|intcomma }}</span></div>
+        <div class="report-row total"><span>Net for the Branch</span><span class="amt">₱{{ branch_report.net|floatformat:0|intcomma }}</span></div>
+        {% else %}
+        <h3>Branch Report</h3>
+        <p>No branch report on file yet.</p>
+        {% endif %}
+      </div>
+      <div class="card">
+        <h3>Notes from Treasurer</h3>
+        <p style="font-size:13.5px; line-height:1.7; color:var(--ink-soft);">
+          {% if branch_report.treasurer_note %}"{{ branch_report.treasurer_note }}"{% else %}No notes yet.{% endif %}
+        </p>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

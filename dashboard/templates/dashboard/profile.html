@@ -1,0 +1,53 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Ledger — Profile{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_pastor_nav.html" with active="profile" pastor=pastor %}
+  </aside>
+  <main class="form-page">
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Profile</h1></div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h3 style="margin-bottom:16px;">Your Details</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label>NAME</label>
+          {{ form.name }}
+        </div>
+        <div class="field">
+          <label>BRANCH</label>
+          {{ form.branch }}
+        </div>
+        <div class="field mono">
+          <label>PHONE</label>
+          {{ form.phone }}
+        </div>
+        <div class="field mono">
+          <label>EMAIL</label>
+          {{ form.email }}
+        </div>
+        <div class="field mono">
+          <label>MESSENGER</label>
+          {{ form.messenger }}
+        </div>
+        {% if form.errors %}
+        <ul class="errorlist">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+        {% endif %}
+        <div class="form-actions" style="margin-top:20px;">
+          <button type="submit" class="btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

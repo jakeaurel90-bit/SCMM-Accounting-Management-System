@@ -1,0 +1,164 @@
+{% extends "dashboard/base.html" %}
+{% load static humanize %}
+
+{% block title %}Ledger — Evangelism Budget Allotment{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/finance_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="budget" org=org %}
+  </aside>
+
+  <main>
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div>
+        <h1>Evangelism Budget Allotment</h1>
+        <div class="period">{{ program_name|upper }} · {{ period|upper }}</div>
+      </div>
+      <a href="#new-line-item" class="btn ghost">+ Add Line Item</a>
+    </div>
+
+    <div class="layout">
+      <!-- Left: allotment table -->
+      <div>
+        <div class="section-head">
+          <h2>Budget Line Items</h2>
+          <span class="note">{{ budget_items|length }} ITEMS</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Account Charged</th>
+              <th class="num">Original Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in budget_items %}
+            <tr>
+              <td>
+                <div class="desc-main">{{ item.title }}</div>
+                {% if item.description %}<div class="desc-sub">{{ item.description }}</div>{% endif %}
+              </td>
+              <td><span class="account-tag">{{ item.account }}</span></td>
+              <td class="num amount">₱{{ item.amount|floatformat:0|intcomma }}</td>
+              <td><a class="icon-btn" href="{% url 'dashboard:edit_budget_item' item.pk %}">Edit</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No line items yet — add one on the right.</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">Total Allotment</td>
+              <td class="num">₱{{ total_allotment|floatformat:0|intcomma }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Right: add item + send -->
+      <div>
+        <div class="card" id="new-line-item">
+          <h3>New Line Item</h3>
+          <div class="hint">Add a budget item for the evangelistic program before sending it out to pastors.</div>
+
+          <form method="post" action="{% url 'dashboard:add_budget_item' %}">
+            {% csrf_token %}
+            <div class="field">
+              <label>DESCRIPTION</label>
+              {{ add_form.title }}
+            </div>
+            <div class="field">
+              <label>ACCOUNT CHARGED</label>
+              {{ add_form.account }}
+            </div>
+            <div class="field">
+              <label>ORIGINAL AMOUNT</label>
+              {{ add_form.amount }}
+            </div>
+            <div class="form-actions">
+              <a href="{% url 'dashboard:finance_dashboard' %}" class="btn ghost" style="text-align:center;">Cancel</a>
+              <button type="submit" class="btn">Add to List</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card send-panel">
+          <h3>Send Allotment</h3>
+          <div class="hint" style="margin-bottom:14px;">Choose how each pastor receives this notice, then send.</div>
+
+          <form method="post" action="{% url 'dashboard:send_allotment' %}" id="send-allotment-form">
+            {% csrf_token %}
+            <div class="label">SEND VIA</div>
+            <div class="channels">
+              <label class="channel-pill on"><input type="checkbox" name="channels" value="Email" checked> Email</label>
+              <label class="channel-pill on"><input type="checkbox" name="channels" value="SMS" checked> SMS</label>
+              <label class="channel-pill"><input type="checkbox" name="channels" value="Messenger"> Messenger</label>
+            </div>
+
+            <div class="label" id="recipient-count-label">RECIPIENTS · {{ recipients|length }} SELECTED</div>
+            <div class="recipient-list">
+              {% for r in recipients %}
+              <div class="recipient">
+                <input type="checkbox" name="recipients" value="{{ r.pk }}" checked>
+                <div class="r-avatar">{{ r.initials }}</div>
+                <div class="r-body">
+                  <div class="r-name">{{ r.name }}</div>
+                  <div class="r-branch">{{ r.branch }}</div>
+                  <div class="r-contacts">
+                    <span class="r-contact"><span class="tag">TEL</span> {{ r.phone|default:"—" }}</span>
+                    {% if r.email %}
+                    <span class="r-contact"><span class="tag">MAIL</span> {{ r.email }}</span>
+                    {% else %}
+                    <span class="r-contact missing"><span class="tag">MAIL</span> not on file</span>
+                    {% endif %}
+                    {% if r.messenger %}
+                    <span class="r-contact"><span class="tag">MSGR</span> {{ r.messenger }}</span>
+                    {% else %}
+                    <span class="r-contact missing"><span class="tag">MSGR</span> not linked</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% empty %}
+              <div class="recipient">No pastors on file yet.</div>
+              {% endfor %}
+            </div>
+
+            <button type="submit" class="btn" id="send-btn" style="width:100%;">Send to {{ recipients|length }} Selected Pastors</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var recipientBoxes = document.querySelectorAll('.recipient input[type="checkbox"]');
+  var countLabel = document.getElementById('recipient-count-label');
+  var sendBtn = document.getElementById('send-btn');
+
+  function updateCount() {
+    var n = document.querySelectorAll('.recipient input[type="checkbox"]:checked').length;
+    if (countLabel) countLabel.textContent = 'RECIPIENTS · ' + n + ' SELECTED';
+    if (sendBtn) sendBtn.textContent = 'Send to ' + n + ' Selected Pastor' + (n === 1 ? '' : 's');
+  }
+  recipientBoxes.forEach(function (cb) { cb.addEventListener('change', updateCount); });
+
+  document.querySelectorAll('.channel-pill').forEach(function (pill) {
+    var cb = pill.querySelector('input[type="checkbox"]');
+    pill.classList.toggle('on', cb.checked);
+    cb.addEventListener('change', function () { pill.classList.toggle('on', cb.checked); });
+  });
+});
+</script>
+{% endblock %}

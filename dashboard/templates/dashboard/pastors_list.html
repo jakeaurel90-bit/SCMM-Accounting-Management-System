@@ -1,0 +1,63 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Ledger — Pastors{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pastor_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="app">
+  <aside class="sidebar">
+    {% include "dashboard/_finance_nav.html" with active="pastors" org=org %}
+  </aside>
+  <main>
+    {% include "dashboard/_messages.html" %}
+    <div class="topline">
+      <div><h1>Pastors</h1></div>
+      <a href="#add-pastor" class="btn ghost">+ Add Pastor</a>
+    </div>
+
+    <table style="margin-top:20px; margin-bottom:34px;">
+      <thead><tr><th>Name</th><th>Branch</th><th>Phone</th><th>Email</th><th>Login</th><th></th></tr></thead>
+      <tbody>
+        {% for p in pastors %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ p.branch }}</td>
+          <td>{{ p.phone|default:"—" }}</td>
+          <td>{{ p.email|default:"—" }}</td>
+          <td>
+            {% if p.user %}<span class="status paid">{{ p.user.username }}</span>{% else %}<span class="status sent">No login</span>{% endif %}
+          </td>
+          <td style="text-align:right;"><a class="icon-btn" href="{% url 'dashboard:edit_pastor' p.pk %}">Edit</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No pastors on file yet — add one below.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="card form-page" id="add-pastor" style="max-width:480px;">
+      <h3 style="margin-bottom:16px;">Add Pastor</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field"><label>NAME</label>{{ form.name }}</div>
+        <div class="field"><label>BRANCH</label>{{ form.branch }}</div>
+        <div class="field mono"><label>PHONE</label>{{ form.phone }}</div>
+        <div class="field mono"><label>EMAIL</label>{{ form.email }}</div>
+        <div class="field mono"><label>MESSENGER</label>{{ form.messenger }}</div>
+        {% if form.errors %}
+        <ul class="errorlist">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+        {% endif %}
+        <div class="form-actions" style="margin-top:20px;">
+          <button type="submit" class="btn">Add Pastor</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}
