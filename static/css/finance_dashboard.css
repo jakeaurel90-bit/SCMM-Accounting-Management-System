@@ -84,6 +84,9 @@ tfoot td{
 }
 .r-contact .tag{font-weight:600; color:var(--ink);}
 .r-contact.missing{opacity:.4; font-style:italic;}
+a.r-contact{text-decoration:none; cursor:pointer;}
+a.r-contact:hover{border-color:var(--good); color:var(--good); background:var(--good-bg);}
+a.r-contact:hover .tag{color:var(--good);}
 
 @media (max-width: 900px){
   .layout{grid-template-columns:1fr;}

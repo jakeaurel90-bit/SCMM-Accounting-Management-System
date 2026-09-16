@@ -121,7 +121,7 @@
                     <span class="r-contact missing"><span class="tag">MAIL</span> not on file</span>
                     {% endif %}
                     {% if r.messenger %}
-                    <span class="r-contact"><span class="tag">MSGR</span> {{ r.messenger }}</span>
+                    <a class="r-contact" href="https://{{ r.messenger }}" target="_blank" rel="noopener" title="Open in Messenger"><span class="tag">MSGR</span> {{ r.messenger }}</a>
                     {% else %}
                     <span class="r-contact missing"><span class="tag">MSGR</span> not linked</span>
                     {% endif %}
