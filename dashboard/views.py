@@ -7,13 +7,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
-from django.core.mail import EmailMessage
 from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import TemplateView
 
+from .emailing import send_pastor_email
 from .forms import (
     BudgetItemEditForm,
     BudgetItemForm,
@@ -294,9 +294,8 @@ def send_allotment(request):
                     f"Total: PHP {total:,.2f}\n\n"
                     f"— Sent via Ledger, {org.organization_name}"
                 )
-                email = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [pastor.email])
                 try:
-                    email.send(using="default")
+                    send_pastor_email(subject, body, pastor.email)
                     emails_sent += 1
                 except Exception:
                     emails_skipped += 1

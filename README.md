@@ -73,20 +73,50 @@ the templates anymore.
 
 ## Sending real emails
 
-"Send Allotment" sends a real email (via Django's SMTP mailer) to every
-selected pastor who has an email address on file, whenever the **Email**
-channel is checked. Without configuring credentials, emails are simply
-printed to your terminal instead — nothing breaks, nothing gets lost, it's
-just not delivered anywhere. This is a good default for local development.
+"Send Allotment" sends a real email to every selected pastor who has an
+address on file, whenever the **Email** channel is checked. Without any
+provider configured, emails are simply printed to your terminal instead —
+nothing breaks, nothing gets lost, it's just not delivered anywhere. This
+is the default for local development.
 
-### Setting it up with Gmail (free)
+There are two ways to send for real, and **which one you need depends on
+where the app is running**:
+
+### On Render (or any host that blocks outbound SMTP): use SendGrid
+
+Render — like most cloud hosts — blocks outbound traffic on the SMTP
+ports Gmail uses, to prevent spam abuse. Gmail's SMTP will **never work**
+from Render, no matter how it's configured (it'll hang until the request
+times out with an Internal Server Error). Use SendGrid's HTTP API
+instead, which works because it's just a normal HTTPS request:
+
+1. Sign up at <https://sendgrid.com> (free tier: 100 emails/day, forever,
+   no card required).
+2. Settings → Sender Authentication → **Verify a Single Sender** — enter
+   the email address you want to send from and confirm it via the email
+   SendGrid sends you.
+3. Settings → API Keys → **Create API Key** (Full Access is simplest).
+   Copy it immediately — SendGrid only shows it once.
+4. On Render: web service → Environment tab → add:
+
+   | Key | Value |
+   |---|---|
+   | `SENDGRID_API_KEY` | the key you just copied |
+   | `DEFAULT_FROM_EMAIL` | the exact address you verified as Single Sender |
+
+5. Save — Render redeploys automatically. From then on, "Send Allotment"
+   with Email checked really sends, via `dashboard/emailing.py`.
+
+### Locally, or on a host that doesn't block SMTP: Gmail App Password works fine
+
+If you're not on Render (or your host doesn't block SMTP), plain Gmail
+SMTP is simpler to set up than SendGrid:
 
 1. On the Google account you want to send from, turn on
    **2-Step Verification** (Google Account → Security).
 2. Go to <https://myaccount.google.com/apppasswords> and create an
    **App Password** — a 16-character code, *not* your normal Gmail password.
-3. Set these values (locally: in `.env`, which loads automatically; on
-   Render: as environment variables in the dashboard):
+3. Set these values (locally: in `.env`, which loads automatically):
 
    | Key | Value |
    |---|---|
@@ -94,13 +124,10 @@ just not delivered anywhere. This is a good default for local development.
    | `EMAIL_HOST_PASSWORD` | the 16-character App Password (no spaces) |
    | `DEFAULT_FROM_EMAIL` | optional — defaults to `EMAIL_HOST_USER` if unset |
 
-4. Restart the server (locally) or redeploy (on Render). From then on,
-   "Send Allotment" with Email checked will really send.
-
-Other SMTP providers (SendGrid, Mailgun, Outlook, your own mail server,
-etc.) work the same way — just set `EMAIL_HOST`, `EMAIL_PORT`,
-`EMAIL_USE_TLS`, `EMAIL_HOST_USER`, and `EMAIL_HOST_PASSWORD` to match
-that provider instead.
+**If both `SENDGRID_API_KEY` and Gmail credentials are set, SendGrid wins**
+— `dashboard/emailing.py` checks for it first. Other SMTP providers
+(Mailgun, Outlook, your own mail server) work the same way as Gmail via
+`EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_USE_TLS`, for hosts that don't block SMTP.
 
 ## Sending real SMS
 
@@ -283,8 +310,10 @@ git push -u origin main
    | `DJANGO_SECRET_KEY` | a long random string (generate one below) |
    | `DJANGO_DEBUG` | `False` |
    | `DATABASE_URL` | the Internal Database URL from step 2 |
-   | `EMAIL_HOST_USER` | *(optional)* your Gmail address — see "Sending real emails" below |
-   | `EMAIL_HOST_PASSWORD` | *(optional)* the Gmail App Password to go with it |
+   | `EMAIL_HOST_USER` | *(optional, local dev only — Gmail SMTP is blocked on Render)* |
+   | `EMAIL_HOST_PASSWORD` | *(optional, local dev only)* |
+   | `SENDGRID_API_KEY` | *(optional)* see "Sending real emails" below — this is the one that actually works on Render |
+   | `DEFAULT_FROM_EMAIL` | *(required if using SendGrid)* your verified Single Sender address |
    | `TWILIO_ACCOUNT_SID` | *(optional)* see "Sending real SMS" below |
    | `TWILIO_AUTH_TOKEN` | *(optional)* see "Sending real SMS" below |
    | `TWILIO_FROM_NUMBER` | *(optional)* see "Sending real SMS" below |
