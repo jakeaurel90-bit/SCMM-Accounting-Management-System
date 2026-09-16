@@ -184,10 +184,10 @@ _email_host_user = os.environ.get('EMAIL_HOST_USER', '')
 _email_host_password = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', _email_host_user or 'noreply@example.com')
 
-# SendGrid's HTTP API — used in preference to SMTP when set, since it works
+# Brevo's HTTP API — used in preference to SMTP when set, since it works
 # on hosts (like Render) that block outbound SMTP ports. See
 # dashboard/emailing.py for how this is used.
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
 
 if _email_host_user and _email_host_password:
     MAILERS = {
