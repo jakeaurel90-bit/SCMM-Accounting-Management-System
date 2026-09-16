@@ -93,7 +93,7 @@
 
         <div class="card send-panel">
           <h3>Send Allotment</h3>
-          <div class="hint" style="margin-bottom:14px;">Choose how each pastor receives this notice, then send.</div>
+          <div class="hint" style="margin-bottom:14px;">Email is sent automatically. SMS sends for real if a provider is configured (otherwise it's logged only). Messenger is always logged only — you'll reach out yourself using the link below.</div>
 
           <form method="post" action="{% url 'dashboard:send_allotment' %}" id="send-allotment-form">
             {% csrf_token %}

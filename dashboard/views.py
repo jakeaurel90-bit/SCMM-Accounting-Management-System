@@ -1,10 +1,13 @@
 import io
+import re
 from functools import wraps
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core.mail import EmailMessage
 from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -27,6 +30,23 @@ CURRENT_PERIOD = "September 2026"
 def get_current_pastor(request):
     """The Pastor profile linked to the logged-in user, if any."""
     return getattr(request.user, "pastor", None)
+
+
+def to_e164_ph(phone):
+    """
+    Best-effort conversion of a Philippine local number (e.g. '0917 452 6631')
+    to E.164 format (+639174526631) for Twilio. If the number already looks
+    international (starts with +), it's just stripped of whitespace.
+    """
+    phone = phone.strip()
+    if phone.startswith("+"):
+        return re.sub(r"\s", "", phone)
+    digits = re.sub(r"\D", "", phone)
+    if digits.startswith("63"):
+        return "+" + digits
+    if digits.startswith("0"):
+        return "+63" + digits[1:]
+    return "+" + digits
 
 
 def pastor_required(view_func):
@@ -246,7 +266,8 @@ def send_allotment(request):
         channels = request.POST.getlist("channels")
         recipient_ids = request.POST.getlist("recipients")
         recipients = Pastor.objects.filter(pk__in=recipient_ids)
-        total = BudgetItem.objects.aggregate(t=Sum("amount"))["t"] or 0
+        budget_items = BudgetItem.objects.all()
+        total = budget_items.aggregate(t=Sum("amount"))["t"] or 0
 
         record = SentAllotment.objects.create(
             channels=", ".join(channels) if channels else "None selected",
@@ -255,11 +276,69 @@ def send_allotment(request):
         )
         record.recipients.set(recipients)
 
-        if recipients.exists():
-            messages.success(
-                request,
-                f"Allotment sent to {recipients.count()} pastor(s) via {', '.join(channels) or 'no channel'}.",
+        emails_sent = 0
+        emails_skipped = 0
+        if "Email" in channels:
+            org = OrgSettings.load()
+            subject = f"Evangelism Budget Allotment — {CURRENT_PERIOD}"
+            item_lines = "\n".join(f"- {item.title}: PHP {item.amount:,.2f}" for item in budget_items)
+            for pastor in recipients:
+                if not pastor.email:
+                    emails_skipped += 1
+                    continue
+                body = (
+                    f"Dear {pastor.name},\n\n"
+                    f"Here is the evangelism budget allotment for {CURRENT_PERIOD} "
+                    f"({pastor.branch}):\n\n"
+                    f"{item_lines}\n\n"
+                    f"Total: PHP {total:,.2f}\n\n"
+                    f"— Sent via Ledger, {org.organization_name}"
+                )
+                email = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [pastor.email])
+                try:
+                    email.send(using="default")
+                    emails_sent += 1
+                except Exception:
+                    emails_skipped += 1
+
+        sms_sent = 0
+        sms_skipped = 0
+        if "SMS" in channels and settings.SMS_ENABLED:
+            from twilio.rest import Client
+
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            sms_body = (
+                f"Ledger: Evangelism Budget Allotment for {CURRENT_PERIOD} — "
+                f"Total PHP {total:,.2f}. Check your email for the full breakdown."
             )
+            for pastor in recipients:
+                if not pastor.phone:
+                    sms_skipped += 1
+                    continue
+                try:
+                    client.messages.create(
+                        body=sms_body,
+                        from_=settings.TWILIO_FROM_NUMBER,
+                        to=to_e164_ph(pastor.phone),
+                    )
+                    sms_sent += 1
+                except Exception:
+                    sms_skipped += 1
+
+        if recipients.exists():
+            msg = f"Allotment logged for {recipients.count()} pastor(s) via {', '.join(channels) or 'no channel'}."
+            if "Email" in channels:
+                msg += f" {emails_sent} email(s) sent."
+                if emails_skipped:
+                    msg += f" {emails_skipped} email(s) skipped (no address on file, or sending failed)."
+            if "SMS" in channels:
+                if settings.SMS_ENABLED:
+                    msg += f" {sms_sent} SMS sent."
+                    if sms_skipped:
+                        msg += f" {sms_skipped} SMS skipped (no phone on file, or sending failed)."
+                else:
+                    msg += " SMS logged only (no SMS provider configured)."
+            messages.success(request, msg)
         else:
             messages.error(request, "Select at least one recipient before sending.")
     return redirect("dashboard:finance_dashboard")

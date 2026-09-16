@@ -59,7 +59,8 @@ before putting this anywhere other people can reach.
 | Download PDF Slip / Download PDF | Generates and downloads a real PDF salary slip (via `reportlab`). |
 | New Line Item (finance) | Submits a form that creates a `BudgetItem` row, shown immediately in the table and totals. |
 | Edit (budget table) | Opens an edit page to update or delete that line item. |
-| Send Allotment | Selecting channels + recipients and clicking Send creates a log entry (`SentAllotment`), visible on the Sent History page. Checkbox counts update live via a small bit of JS. |
+| Send Allotment | Selecting channels + recipients and clicking Send creates a log entry (`SentAllotment`), visible on the Sent History page. If "Email" is checked, a real email is sent via SMTP to every selected pastor with an address on file. If "SMS" is checked and Twilio is configured, a real text is sent to every selected pastor with a phone number on file (auto-converted to `+63...` format). Messenger is logged only. Checkbox counts update live via a small bit of JS. |
+| Messenger contact link | The MSGR tag on each recipient card is a real clickable link that opens `https://m.me/...` in a new tab. |
 | Pastors page | Lists all pastors (starts empty) — add, edit, or delete any pastor. |
 | Pastor login management | Create/reset/revoke a pastor's login right from their Edit page — no need to touch Django admin. |
 | Salary Payments page | Lists all payments and lets you record a new one (which then shows up in that pastor's salary history). |
@@ -69,6 +70,77 @@ before putting this anywhere other people can reach.
 
 All of this is backed by SQLite via Django's ORM — nothing is hardcoded in
 the templates anymore.
+
+## Sending real emails
+
+"Send Allotment" sends a real email (via Django's SMTP mailer) to every
+selected pastor who has an email address on file, whenever the **Email**
+channel is checked. Without configuring credentials, emails are simply
+printed to your terminal instead — nothing breaks, nothing gets lost, it's
+just not delivered anywhere. This is a good default for local development.
+
+### Setting it up with Gmail (free)
+
+1. On the Google account you want to send from, turn on
+   **2-Step Verification** (Google Account → Security).
+2. Go to <https://myaccount.google.com/apppasswords> and create an
+   **App Password** — a 16-character code, *not* your normal Gmail password.
+3. Set these values (locally: in `.env`, which loads automatically; on
+   Render: as environment variables in the dashboard):
+
+   | Key | Value |
+   |---|---|
+   | `EMAIL_HOST_USER` | your full Gmail address |
+   | `EMAIL_HOST_PASSWORD` | the 16-character App Password (no spaces) |
+   | `DEFAULT_FROM_EMAIL` | optional — defaults to `EMAIL_HOST_USER` if unset |
+
+4. Restart the server (locally) or redeploy (on Render). From then on,
+   "Send Allotment" with Email checked will really send.
+
+Other SMTP providers (SendGrid, Mailgun, Outlook, your own mail server,
+etc.) work the same way — just set `EMAIL_HOST`, `EMAIL_PORT`,
+`EMAIL_USE_TLS`, `EMAIL_HOST_USER`, and `EMAIL_HOST_PASSWORD` to match
+that provider instead.
+
+## Sending real SMS
+
+"Send Allotment" can also send a real text message to every selected
+pastor with a phone number on file, via [Twilio](https://www.twilio.com).
+Unlike email, there's no free option here — Twilio is a paid,
+pay-per-message service (carriers charge for SMS delivery), and you'll
+need to buy a phone number to send from.
+
+Without Twilio configured, SMS stays exactly as before: logged in the
+Sent History, but not actually delivered.
+
+### Setting it up
+
+1. Create a Twilio account and buy a phone number that can send SMS
+   (Twilio's console walks you through this — trial accounts get a small
+   free credit to test with).
+2. From the Twilio Console, copy your **Account SID** and **Auth Token**.
+3. Set these values (locally: in `.env`; on Render: as environment
+   variables):
+
+   | Key | Value |
+   |---|---|
+   | `TWILIO_ACCOUNT_SID` | starts with `AC...` |
+   | `TWILIO_AUTH_TOKEN` | from the Twilio Console |
+   | `TWILIO_FROM_NUMBER` | your Twilio number, in `+1XXXXXXXXXX` format |
+
+4. Restart the server (locally) or redeploy (on Render).
+
+**Phone number format**: pastor phone numbers are stored in local
+Philippine format (e.g. `0917 452 6631`) to match how the app was seeded.
+Before sending, the app automatically converts that to the `+63...`
+international format Twilio requires — no need to re-enter numbers with a
+country code. If you enter a number with `+` already, it's used as-is.
+
+**Regulatory note**: sending SMS to the Philippines (or any country) via
+Twilio may require additional carrier registration or a local sender ID
+depending on volume and use case — check Twilio's
+[Philippines guidelines](https://www.twilio.com/en-us/guidelines/ph/sms)
+before sending to real numbers at scale.
 
 ## Project structure
 
@@ -125,13 +197,16 @@ church_ledger/
    ```
 
 4. **Configure environment variables (optional for local dev)**
-   Copy `.env.example` to `.env` and adjust values if needed. The project
-   falls back to safe development defaults if you skip this step.
+   Copy `.env.example` to `.env` and adjust values if needed — it's loaded
+   automatically, no extra setup required. The project falls back to safe
+   development defaults (including printing emails to the console instead
+   of sending them) if you skip this step entirely.
 
 5. **Apply migrations** — this creates `db.sqlite3` *and* seeds it with the
-   original demo data (Rev. Dizon, the 5 pastors, the 3 budget line items,
-   etc.) via a data migration, so the site looks right the first time you
-   open it.
+   demo data (the 3 budget line items, org settings, and the `treasurer`
+   login) via a data migration, so the site looks right the first time you
+   open it. Pastors start empty by design — see "Login & demo accounts"
+   below.
    ```bash
    python manage.py migrate
    ```
@@ -170,17 +245,85 @@ church_ledger/
   access and any linked pastor sees only their own data — add Django
   Groups/permissions if you need more roles (e.g. read-only auditor).
 
-## Deploying
+## Deploying on Render
 
-Before deploying anywhere public:
+This project is pre-configured for Render: it uses `dj-database-url` (reads
+a `DATABASE_URL` env var, falls back to local SQLite), `whitenoise` (serves
+static files without a separate web server), and `gunicorn` (the
+production server), plus `build.sh` which Render runs automatically.
 
-- Set a strong, secret `DJANGO_SECRET_KEY` environment variable.
-- Set `DJANGO_DEBUG=False`.
-- Set `DJANGO_ALLOWED_HOSTS` to your real domain(s).
-- Run `python manage.py collectstatic` to gather static files into
-  `staticfiles/` for your web server to serve.
-- Switch `DATABASES` in `config/settings.py` to a production database (e.g.
-  PostgreSQL) if SQLite isn't sufficient for your traffic.
+### 1. Push to GitHub
+
+```bash
+git init
+git add .
+git commit -m "Ready for Render deployment"
+git branch -M main
+git remote add origin <your-empty-repo-url>
+git push -u origin main
+```
+
+### 2. Create the database on Render
+
+1. Render dashboard → **New** → **PostgreSQL**.
+2. Give it a name, pick the free tier, create it.
+3. Once it's up, copy its **Internal Database URL** — you'll paste it into
+   the web service's environment variables in the next step.
+
+### 3. Create the web service
+
+1. Render dashboard → **New** → **Web Service** → connect your GitHub repo.
+2. Settings:
+   - **Build Command**: `./build.sh`
+   - **Start Command**: `gunicorn config.wsgi:application`
+3. Add these **Environment Variables**:
+
+   | Key | Value |
+   |---|---|
+   | `DJANGO_SECRET_KEY` | a long random string (generate one below) |
+   | `DJANGO_DEBUG` | `False` |
+   | `DATABASE_URL` | the Internal Database URL from step 2 |
+   | `EMAIL_HOST_USER` | *(optional)* your Gmail address — see "Sending real emails" below |
+   | `EMAIL_HOST_PASSWORD` | *(optional)* the Gmail App Password to go with it |
+   | `TWILIO_ACCOUNT_SID` | *(optional)* see "Sending real SMS" below |
+   | `TWILIO_AUTH_TOKEN` | *(optional)* see "Sending real SMS" below |
+   | `TWILIO_FROM_NUMBER` | *(optional)* see "Sending real SMS" below |
+
+   Render automatically provides `RENDER_EXTERNAL_HOSTNAME`, which
+   `settings.py` already trusts for `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` —
+   you don't need to set that one yourself.
+
+   To generate a secret key, run this locally:
+   ```bash
+   python -c "import secrets; print(secrets.token_urlsafe(50))"
+   ```
+
+4. Click **Create Web Service**. Render will run `build.sh` (installs
+   dependencies, collects static files, runs migrations) and then start
+   the app with gunicorn.
+
+### 4. First-login setup
+
+Once it's live at `https://<your-app>.onrender.com`:
+
+1. Log in as `treasurer` / `treasurer123`.
+2. Go to **Settings** and/or use Render's **Shell** tab
+   (`python manage.py changepassword treasurer`) to change that password
+   immediately — it's public in this README.
+3. Add your real pastors from the **Pastors** page and create their logins
+   from there.
+
+### Redeploying after changes
+
+Push to your GitHub branch — Render auto-deploys on every push (re-runs
+`build.sh`, so migrations run automatically too).
+
+### Alternative hosts
+
+The same `build.sh` / `gunicorn` / `dj-database-url` / `whitenoise` setup
+works with minimal changes on Railway, Fly.io, or a plain VPS — the main
+difference is how each platform wants you to supply `DATABASE_URL` and
+run the build/start commands.
 
 ## Uploading to GitHub
 
@@ -197,5 +340,3 @@ git push -u origin main
 and other files that shouldn't be committed. Since `db.sqlite3` is
 gitignored, anyone who clones the repo gets a fresh, auto-seeded database
 the first time they run `python manage.py migrate`.
-#   S C M M - A c c o u n t i n g - M a n a g e m e n t - S y s t e m  
- 
